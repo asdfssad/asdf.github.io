@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>物品交換市集</title>
+<style>
+body {
+font-family: 'Segoe UI', sans-serif;
+background-color: #f6f7f9;
+margin: 0;
+}
+header {
+background-color: #2c3e50;
+color: white;
+padding: 1rem 2rem;
+display: flex;
+justify-content: space-between;
+align-items: center;
+}
+nav a {
+color: white;
+text-decoration: none;
+margin-left: 1rem;
+font-weight: bold;
+}
+.hero {
+display: flex;
+justify-content: center;
+flex-wrap: wrap;
+gap: 1rem;
+padding: 2rem;
+}
+.hero-box {
+width: 300px;
+background: white;
+border-radius: 12px;
+box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+overflow: hidden;
+text-align: center;
+transition: transform 0.2s;
+}
+.hero-box:hover { transform: scale(1.03); }
+.hero-box img {
+width: 100%;
+height: 200px;
+object-fit: cover;
+}
+.hero-box h3 { margin: 0.8rem 0 0.2rem; }
+.hero-box p { color: #777; margin: 0 0 1rem; }
+.hero-box a {
+display: inline-block;
+background: #2980b9;
+color: white;
+padding: 0.4rem 1rem;
+border-radius: 6px;
+margin-bottom: 1rem;
+text-decoration: none;
+}
+.section {
+max-width: 800px;
+margin: auto;
+background: white;
+padding: 2rem;
+border-radius: 12px;
+box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+margin-bottom: 2rem;
+}
+label {
+display: block;
+margin-top: 1rem;
+}
+input, select, textarea {
+width: 100%;
+padding: 0.5rem;
+margin-top: 0.3rem;
+border-radius: 6px;
+border: 1px solid #ccc;
+}
+button {
+margin-top: 1rem;
+padding: 0.6rem 1.2rem;
+background-color: #2980b9;
+color: white;
+border: none;
+border-radius: 6px;
+cursor: pointer;
+}
+img.preview {
+max-width: 150px;
+margin-top: 0.5rem;
+display: block;
+}
+</style>
+</head>
+<body>
+<header>
+<h1>📦 物品交換市集</h1>
+<nav>
+<a href="#post">刊登</a>
+<span id="user-info" style="margin-left: 1rem;"></span>
+<button onclick="showLoginModal()" style="margin-left: 1rem; background:#16a085;">登入</button>
+</nav>
+</header>
+
+<section style="text-align: center; margin-top: 2rem;">
+<h2 style="font-size: 1.8rem; color: #2c3e50;">🔍 想交換什麼東西呢？</h2>
+</section>
+
+<section class="section" style="margin-top: 2rem;">
+<h2>🔎 搜尋物品</h2>
+<label>
+關鍵字搜尋：
+<input type="text" id="search-keyword" placeholder="輸入物品名稱或分類..." oninput="searchItems()" />
+</label>
+</section>
+<section class="hero">
+<div class="hero-box">
+<img src="book.jpg" alt="書籍">
+<h3>書籍</h3>
+<p>各類好書交換</p>
+<a href="book.html">more</a>
+</div>
+<div class="hero-box">
+<img src="cloth.jpg" alt="衣物">
+<h3>衣物</h3>
+<p>清新穿搭分享</p>
+<a href="cloth.html">more</a>
+</div>
+<div class="hero-box">
+<img src="appliance.jpg" alt="家電與工具">
+<h3>家電與工具</h3>
+<p>實用裝備交換</p>
+<a href="appliance.html">more</a>
+</div>
+</section>
+
+
+
+<section class="section" id="post">
+<h2>📤 刊登物品</h2>
+<label>物品名稱：<input type="text" id="item-name" /></label>
+<label>物品描述：<textarea id="item-desc"></textarea></label>
+<label>狀況：
+<select id="item-condition">
+<option>全新</option>
+<option>使用中</option>
+<option>瑕疵</option>
+</select>
+</label>
+<label>希望交換的類型：<input type="text" id="item-type" /></label>
+<label>物品分類：
+<select id="item-category">
+<option value="書籍">書籍</option>
+<option value="衣物">衣物</option>
+<option value="家電與工具">家電與工具</option>
+</select>
+</label>
+<label>上傳圖片：<input type="file" id="item-image" accept="image/*" onchange="previewImage(event)" /></label>
+<img id="preview" class="preview" style="display:none;" />
+<button onclick="postItem()">📤 刊登</button>
+<div class="item-list" id="item-list"></div>
+</section>
+
+<script>
+let items = JSON.parse(localStorage.getItem("items")) || [];
+
+function previewImage(event) {
+const file = event.target.files[0];
+if (!file) return;
+const reader = new FileReader();
+reader.onload = function(e) {
+const img = document.getElementById('preview');
+img.src = e.target.result;
+img.style.display = 'block';
+}
+reader.readAsDataURL(file);
+}
+
+function postItem() {
+const name = document.getElementById('item-name').value.trim();
+const desc = document.getElementById('item-desc').value.trim();
+const condition = document.getElementById('item-condition').value;
+const type = document.getElementById('item-type').value.trim();
+const category = document.getElementById('item-category').value;
+const owner = localStorage.getItem("loggedInUser"); // 自動填入登入者名稱
+const imageInput = document.getElementById('item-image');
+const file = imageInput.files[0];
+
+if (!owner) {
+alert("請先登入才能刊登！");
+return;
+}
+
+if (!name || !desc) {
+alert("請填寫物品名稱與描述！");
+return;
+}
+
+const reader = new FileReader();
+reader.onload = function(e) {
+const imageURL = file ? e.target.result : '';
+
+const newItem = {
+name,
+desc,
+condition,
+type,
+category,
+owner,
+imageURL,
+likes: [],
+comments: [],
+favorites: []
+};
+
+items.push(newItem);
+localStorage.setItem("items", JSON.stringify(items));
+displayItems();
+
+// 清空表單
+document.getElementById('item-name').value = '';
+document.getElementById('item-desc').value = '';
+document.getElementById('item-condition').selectedIndex = 0;
+document.getElementById('item-type').value = '';
+document.getElementById('item-category').selectedIndex = 0;
+document.getElementById('item-image').value = '';
+document.getElementById('preview').style.display = 'none';
+};
+
+if (file) {
+reader.readAsDataURL(file);
+} else {
+reader.onload({ target: { result: '' } }); // 無圖也能刊登
+}
+}
+
+
+
+
+function searchItems() {
+const keyword = document.getElementById('search-keyword').value.toLowerCase();
+const filtered = items.filter(item =>
+item.name.toLowerCase().includes(keyword) ||
+item.category.toLowerCase().includes(keyword)
+);
+displayItems(filtered);
+}
+
+function displayItems(filtered = items) {
+const username = localStorage.getItem("loggedInUser");
+const list = document.getElementById('item-list');
+
+// 依照是否被登入者收藏排序：收藏的置頂
+const sorted = [...filtered].sort((a, b) => {
+const aFav = a.favorites?.includes(username) ? 0 : 1;
+const bFav = b.favorites?.includes(username) ? 0 : 1;
+return aFav - bFav;
+});
+
+list.innerHTML = '';
+
+sorted.forEach((item, index) => {
+const liked = item.likes?.length || 0;
+const isFavorited = item.favorites?.includes(username);
+
+list.innerHTML += `
+<div class="item" style="margin-bottom: 1.5rem; border-bottom: 1px solid #ccc; padding-bottom: 1rem;">
+<strong>${item.name}</strong> - ${item.condition}<br>
+${item.desc}<br>
+📌 分類：${item.category}｜擁有者：${item.owner}<br>
+${item.imageURL ? `<img src="${item.imageURL}" class="preview">` : ''}<br>
+❤️ 喜歡數量：<strong>${liked}</strong><br>
+
+<button onclick="likeItem(${items.indexOf(item)})" style="margin-top:0.3rem;">👍 喜歡</button>
+<button onclick="toggleFavorite(${items.indexOf(item)})" style="margin-top:0.3rem; background-color:${isFavorited ? '#f1c40f' : '#7f8c8d'};">
+${isFavorited ? '⭐ 已收藏' : '🤍 收藏'}
+</button>
+<button onclick="deleteItem(${items.indexOf(item)})" style="background-color:#e74c3c; margin-top:0.5rem;">❌ 刪除</button>
+
+<div style="margin-top:1rem;">
+<h4>💬 留言</h4>
+<div id="comments-${items.indexOf(item)}" style="margin-bottom:0.5rem;">
+${
+item.comments?.length > 0
+? item.comments.map(c => `<div style="border:1px solid #ddd; border-radius:6px; padding:0.4rem; margin-bottom:0.4rem;"><strong>${c.user}：</strong>${c.text}</div>`).join('')
+: '<em>目前沒有留言</em>'
+}
+</div>
+<input type="text" id="comment-input-${items.indexOf(item)}" placeholder="輸入留言..." style="width:80%; padding:0.4rem;" />
+<button onclick="addComment(${items.indexOf(item)})" style="margin-left:0.5rem;">➕ 留言</button>
+</div>
+</div>
+`;
+});
+}
+
+
+function toggleFavorite(index) {
+const username = localStorage.getItem("loggedInUser");
+if (!username) {
+alert("請先登入才能收藏！");
+return;
+}
+
+const favorites = items[index].favorites || [];
+
+if (favorites.includes(username)) {
+items[index].favorites = favorites.filter(u => u !== username);
+} else {
+favorites.push(username);
+items[index].favorites = favorites;
+}
+
+localStorage.setItem("items", JSON.stringify(items));
+displayItems();
+}
+
+
+
+function deleteItem(index) {
+if (confirm("確定要刪除此物品嗎？")) {
+items.splice(index, 1);
+localStorage.setItem("items", JSON.stringify(items));
+displayItems();
+}
+}
+
+displayItems();
+function showLoginModal() {
+document.getElementById("login-modal").style.display = "flex";
+}
+
+function hideLoginModal() {
+document.getElementById("login-modal").style.display = "none";
+}
+
+function login() {
+const phone = document.getElementById("login-phone").value.trim();
+const password = document.getElementById("login-password").value.trim();
+
+if (!phone || !password) {
+alert("請填寫帳號與密碼！");
+return;
+}
+
+// 不檢查內容，直接登入
+localStorage.setItem("loggedInUser", phone);
+updateLoginStatus();
+hideLoginModal();
+}
+
+function logout() {
+localStorage.removeItem("loggedInUser");
+updateLoginStatus();
+}
+
+function updateLoginStatus() {
+const userInfo = document.getElementById("user-info");
+const postSection = document.getElementById("post");
+const loginButton = document.querySelector("nav button");
+const username = localStorage.getItem("loggedInUser");
+
+if (username) {
+userInfo.innerHTML = `👤 ${username} | <a href="#" onclick="logout()" style="color: #f39c12;">登出</a>`;
+postSection.style.display = "block";
+loginButton.style.display = "none";
+} else {
+userInfo.innerHTML = "";
+postSection.style.display = "none";
+loginButton.style.display = "inline-block";
+}
+}
+
+
+// 頁面載入時判斷是否已登入
+updateLoginStatus();
+
+function likeItem(index) {
+const username = localStorage.getItem("loggedInUser");
+if (!username) {
+alert("請先登入才能按喜歡！");
+return;
+}
+
+if (!items[index].likes) {
+items[index].likes = [];
+}
+
+if (items[index].likes.includes(username)) {
+alert("你已經按過這個物品了！");
+return;
+}
+
+items[index].likes.push(username);
+localStorage.setItem("items", JSON.stringify(items));
+displayItems();
+}
+function addComment(index) {
+const username = localStorage.getItem("loggedInUser");
+if (!username) {
+alert("請先登入才能留言！");
+return;
+}
+
+const input = document.getElementById(`comment-input-${index}`);
+const text = input.value.trim();
+
+if (!text) {
+alert("留言不能為空！");
+return;
+}
+
+if (!items[index].comments) {
+items[index].comments = [];
+}
+
+items[index].comments.push({
+user: username,
+text: text
+});
+
+localStorage.setItem("items", JSON.stringify(items));
+displayItems(); // 重新顯示留言
+}
+
+function toggleFavorite(index) {
+const username = localStorage.getItem("loggedInUser");
+if (!username) {
+alert("請先登入才能收藏！");
+return;
+}
+
+if (!items[index].favorites) {
+items[index].favorites = [];
+}
+
+const favList = items[index].favorites;
+const userIndex = favList.indexOf(username);
+
+if (userIndex !== -1) {
+favList.splice(userIndex, 1); // 移除收藏
+} else {
+favList.push(username); // 加入收藏
+}
+
+localStorage.setItem("items", JSON.stringify(items));
+displayItems();
+}
+
+
+
+
+</script>
+<div id="login-modal" style="
+display: none;
+position: fixed;
+top: 0; left: 0;
+width: 100%; height: 100%;
+background: rgba(0,0,0,0.5);
+justify-content: center;
+align-items: center;
+z-index: 1000;
+">
+<div style="
+background: white;
+padding: 2rem;
+border-radius: 12px;
+width: 300px;
+box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+position: relative;
+">
+<h3 style="margin-top: 0;">🔐 登入</h3>
+<label>帳號：<input type="text" id="login-phone" /></label>
+<label>密碼：<input type="password" id="login-password" /></label>
+<button onclick="login()" style="margin-top: 1rem; width: 100%;">登入</button>
+<button onclick="hideLoginModal()" style="margin-top: 0.5rem; width: 100%; background: #bdc3c7;">取消</button>
+</div>
+</div>
+
+</body>
+</html>
